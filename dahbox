@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+#
+# DahBox
+#
+#  Copyright 2020 Jérémie Lesage, Jeci <https://jeci.fr/>
+#
+# This file is part of GNU grep.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+set -o pipefail
+
+function _usage() {
+  echo "Usage: dahbox create name [options] [packages]"
+  echo "  options"
+  echo "    --from, -f <image> base image (default: alpine)"
+  echo "    --tag, -t <tag> base image (default: latest)"
+  echo "    --force, -f force overwrite file if already exist"
+
+}
+
+if ! command -v podman >/dev/null 2>&1; then
+	echo "=E= Missing podman"
+	exit 1
+elif ! command -v buildah >/dev/null 2>&1; then
+	echo "=E= Missing buildah"
+	exit 1
+fi
+
+declare -r ACTION="$1"
+shift
+declare -r NAME="$1"
+shift
+
+if [[ -z "$ACTION" ]]; then
+  _usage
+  exit 1
+fi
+
+if [[ -z "$NAME" ]]; then
+  _usage
+  exit 1
+fi
+
+## if name == dahbox
+
+##################################
+# Parse options
+##################################
+
+REGISTRY=docker.io/library
+COMMAND=$NAME
+FROM=alpine
+TAG=:latest
+FORCE="false"
+PACKAGES=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f|--from)
+      shift
+      FROM="$1"
+      shift
+    ;;
+    -t|--tag)
+      shift
+      TAG=":$1"
+      shift
+    ;;
+    --force)
+      FORCE="true"
+      shift
+    ;;
+    *)
+      PACKAGES+="$1 "
+      shift
+    ;;
+  esac
+done
+
+install_init=
+case "$FROM" in
+  alpine)
+    install_cmd="apk add"
+  ;;
+  fedora)
+    install_cmd="dnf install -y"
+  ;;
+  centos)
+    install_cmd="dnf install -y"
+  ;;
+  debian|ubuntu)
+    install_init="apt-get update"
+    install_cmd="apt-get install -y"
+  ;;
+  node)
+    install_cmd="npm install -g"
+  ;;
+  *)
+    echo "=I= Base not know, please define --install_cmd and --install_init"
+    echo "=I= Or don't try to install package"
+  ;;
+esac
+
+
+##################################
+# Check and define variables
+##################################
+
+# https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+script_name="$DIR/${NAME}"
+
+if [[ ${FORCE} == false ]] && [[ -f ${script_name} ]]; then
+  echo "=E= File ${script_name} already exist, use --force "
+  exit 3
+fi
+
+# shellcheck disable=SC2086
+cat > "${script_name}" <<EOF
+#!/usr/bin/env bash
+# =-=
+# =-= DahBox ${NAME} =-= #
+# =-=
+
+image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
+
+if [[ -z "\$image_id" ]]; then
+  echo "=-= DahBox Build ${NAME} =-="
+  container=\$(buildah from ${REGISTRY}/${FROM}${TAG})
+  $( [[ -n "$install_init" ]] && \
+  echo buildah run \"\$container\" -- ${install_init} )
+  $( [[ -n "$PACKAGES" ]] && \
+  echo buildah run \"\$container\" -- ${install_cmd} ${PACKAGES} )
+
+  ## Include some buildtime annotations
+  buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
+  buildah commit "\$container" "dahbox/${NAME}"
+  echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+fi
+
+podman run --rm \\
+  -v "\$HOME:\$HOME" -w "\$PWD" \\
+  -it --net host \\
+  "dahbox/${NAME}" ${COMMAND} "\$@"
+EOF
+
+chmod +x "${script_name}"
+
+echo "=-= Script created : ${script_name} =-="
