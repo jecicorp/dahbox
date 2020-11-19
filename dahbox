@@ -24,6 +24,8 @@ set -o pipefail
 
 function _usage() {
   echo "Usage: dahbox create name [options] [packages]"
+  echo "  command"
+  echo "    create <name> name off the script to create"
   echo "  options"
   echo "    --from, -f <image> base image (default: alpine)"
   echo "    --tag, -t <tag> base image (default: latest)"
@@ -33,11 +35,11 @@ function _usage() {
 }
 
 if ! command -v podman >/dev/null 2>&1; then
-	echo "=E= Missing podman"
-	exit 1
+  echo "=E= Missing podman"
+  exit 1
 elif ! command -v buildah >/dev/null 2>&1; then
-	echo "=E= Missing buildah"
-	exit 1
+  echo "=E= Missing buildah"
+  exit 1
 fi
 
 declare -r ACTION="$1"
@@ -49,6 +51,15 @@ if [[ -z "$ACTION" ]]; then
   _usage
   exit 1
 fi
+
+case "$ACTION" in
+  create)
+  ;;
+  *)
+    _usage
+    exit 1
+  ;;
+esac
 
 if [[ -z "$NAME" ]]; then
   _usage

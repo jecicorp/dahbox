@@ -12,7 +12,7 @@ For exemple:
 
 ``` bash
 sudo dnf install podman buildah
-curl -o $HOME/.local/bin/dahbox ..
+curl -o $HOME/.local/bin/dahbox https://gitlab.beezim.fr/jeci/dahbox/-/raw/master/dahbox
 chmod +x $HOME/.local/bin/dahbox
 ```
 
@@ -72,6 +72,20 @@ ng version
 ``` bash
 dahbox create mvn --from maven --tag 3-openjdk-11
 mvn --version
+```
+
+* Bash in Alpine
+
+``` bash
+dahbox create alpine --command bash bash
+alpine
+```
+
+* Mongo
+
+``` bash
+dahbox create mongo --tag 3.9 mongodb
+mongo
 ```
 
 ## Licensing
