@@ -28,6 +28,7 @@ function _usage() {
   echo "    --from, -f <image> base image (default: alpine)"
   echo "    --tag, -t <tag> base image (default: latest)"
   echo "    --force, -f force overwrite file if already exist"
+  echo "    --command, -c CMD"
 
 }
 
@@ -76,6 +77,11 @@ while [[ $# -gt 0 ]]; do
     -t|--tag)
       shift
       TAG=":$1"
+      shift
+    ;;
+    -c|--command)
+      shift
+      COMMAND="$1"
       shift
     ;;
     --force)
