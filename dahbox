@@ -31,6 +31,7 @@ function _usage() {
   echo "    --tag, -t <tag> base image (default: latest)"
   echo "    --force, -f force overwrite file if already exist"
   echo "    --command, -c CMD"
+  echo "    --debug echo bash command"
 
 }
 
@@ -77,6 +78,7 @@ COMMAND=$NAME
 FROM=alpine
 TAG=:latest
 FORCE="false"
+DEBUG="false"
 PACKAGES=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -97,6 +99,10 @@ while [[ $# -gt 0 ]]; do
     ;;
     --force)
       FORCE="true"
+      shift
+    ;;
+    --debug)
+      DEBUG="true"
       shift
     ;;
     *)
@@ -151,7 +157,7 @@ cat > "${script_name}" <<EOF
 # =-=
 # =-= DahBox ${NAME} =-= #
 # =-=
-
+$( [[ -n "$DEBUG" ]] && echo "set -x")
 image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
 
 if [[ -z "\$image_id" ]]; then
