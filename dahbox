@@ -177,7 +177,7 @@ function _create() {
 # =-=
 # =-= DahBox ${NAME} =-= #
 # =-=
-$( [[ -n "$DEBUG" ]] && echo "set -x")
+$( [[ ${DEBUG} == true ]] && echo "set -x")
 image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
 
 if [[ -z "\$image_id" ]]; then
