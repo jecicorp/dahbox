@@ -48,6 +48,9 @@ function _main() {
     create)
     _create "$@"
     ;;
+    list)
+    _list "$@"
+    ;;
     *)
       _usage
       exit 1
@@ -187,4 +190,8 @@ EOF
   echo "=-= Script created : ${script_name} =-="
 }
 
+function _list() {
+  echo "=-= Local DahBox =-="
+  podman image ls --filter 'reference=localhost/dahbox/'
+}
 _main  "$@"
