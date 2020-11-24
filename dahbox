@@ -165,31 +165,31 @@ function _create() {
 
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
-  #!/usr/bin/env bash
-  # =-=
-  # =-= DahBox ${NAME} =-= #
-  # =-=
-  $( [[ -n "$DEBUG" ]] && echo "set -x")
-  image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
+#!/usr/bin/env bash
+# =-=
+# =-= DahBox ${NAME} =-= #
+# =-=
+$( [[ -n "$DEBUG" ]] && echo "set -x")
+image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
 
-  if [[ -z "\$image_id" ]]; then
-    echo "=-= DahBox Build ${NAME} =-="
-    container=\$(buildah from ${REGISTRY}/${FROM}${TAG})
-    $( [[ -n "$install_init" ]] && \
-    echo buildah run \"\$container\" -- ${install_init} )
-    $( [[ -n "$PACKAGES" ]] && \
-    echo buildah run \"\$container\" -- ${install_cmd} ${PACKAGES} )
+if [[ -z "\$image_id" ]]; then
+  echo "=-= DahBox Build ${NAME} =-="
+  container=\$(buildah from ${REGISTRY}/${FROM}${TAG})
+  $( [[ -n "$install_init" ]] && \
+  echo buildah run \"\$container\" -- ${install_init} )
+  $( [[ -n "$PACKAGES" ]] && \
+  echo buildah run \"\$container\" -- ${install_cmd} ${PACKAGES} )
 
-    ## Include some buildtime annotations
-    buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
-    buildah commit "\$container" "dahbox/${NAME}"
-    echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-  fi
+  ## Include some buildtime annotations
+  buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
+  buildah commit "\$container" "dahbox/${NAME}"
+  echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+fi
 
-  podman run --rm \\
-    -v "\$HOME:\$HOME" -w "\$PWD" \\
-    --init -it --net host \\
-    "dahbox/${NAME}" ${COMMAND} "\$@"
+podman run --rm \\
+  -v "\$HOME:\$HOME" -w "\$PWD" \\
+  --init -it --net host \\
+  "dahbox/${NAME}" ${COMMAND} "\$@"
 EOF
 
   chmod +x "${script_name}"
