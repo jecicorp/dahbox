@@ -22,57 +22,9 @@
 
 set -o pipefail
 
-function _usage() {
-  echo "Usage: dahbox create name [options] [packages]"
-  echo "  command"
-  echo "    create <name> name off the script to create"
-  echo "  options"
-  echo "    --from, -f <image> base image (default: alpine)"
-  echo "    --tag, -t <tag> base image (default: latest)"
-  echo "    --force, -f force overwrite file if already exist"
-  echo "    --command, -c CMD"
-  echo "    --debug echo bash command"
-
-}
-
-if ! command -v podman >/dev/null 2>&1; then
-  echo "=E= Missing podman"
-  exit 1
-elif ! command -v buildah >/dev/null 2>&1; then
-  echo "=E= Missing buildah"
-  exit 1
-fi
-
 declare -r ACTION="$1"
 shift
-declare -r NAME="$1"
-shift
-
-if [[ -z "$ACTION" ]]; then
-  _usage
-  exit 1
-fi
-
-case "$ACTION" in
-  create)
-  ;;
-  *)
-    _usage
-    exit 1
-  ;;
-esac
-
-if [[ -z "$NAME" ]]; then
-  _usage
-  exit 1
-fi
-
-## if name == dahbox
-
-##################################
-# Parse options
-##################################
-
+NAME=
 REGISTRY=docker.io/library
 COMMAND=$NAME
 FROM=alpine
@@ -80,106 +32,159 @@ TAG=:latest
 FORCE="false"
 DEBUG="false"
 PACKAGES=""
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -f|--from)
-      shift
-      FROM="$1"
-      shift
-    ;;
-    -t|--tag)
-      shift
-      TAG=":$1"
-      shift
-    ;;
-    -c|--command)
-      shift
-      COMMAND="$1"
-      shift
-    ;;
-    --force)
-      FORCE="true"
-      shift
-    ;;
-    --debug)
-      DEBUG="true"
-      shift
-    ;;
-    *)
-      PACKAGES+="$1 "
-      shift
-    ;;
-  esac
-done
-
-install_init=
-case "$FROM" in
-  alpine)
-    install_cmd="apk add"
-  ;;
-  fedora)
-    install_cmd="dnf install -y"
-  ;;
-  centos)
-    install_cmd="dnf install -y"
-  ;;
-  debian|ubuntu)
-    install_init="apt-get update"
-    install_cmd="apt-get install -y"
-  ;;
-  node)
-    install_cmd="npm install -g"
-  ;;
-  *)
-    echo "=I= Base not know, please define --install_cmd and --install_init"
-    echo "=I= Or don't try to install package"
-  ;;
-esac
-
-
-##################################
-# Check and define variables
-##################################
 
 # https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-script_name="$DIR/${NAME}"
+function _main() {
+  _prereq
 
-if [[ ${FORCE} == false ]] && [[ -f ${script_name} ]]; then
-  echo "=E= File ${script_name} already exist, use --force "
-  exit 3
-fi
+  if [[ -z "$ACTION" ]]; then
+    _usage
+    exit 1
+  fi
 
-# shellcheck disable=SC2086
-cat > "${script_name}" <<EOF
-#!/usr/bin/env bash
-# =-=
-# =-= DahBox ${NAME} =-= #
-# =-=
-$( [[ -n "$DEBUG" ]] && echo "set -x")
-image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
+  case "$ACTION" in
+    create)
+    _create "$@"
+    ;;
+    *)
+      _usage
+      exit 1
+    ;;
+  esac
+}
 
-if [[ -z "\$image_id" ]]; then
-  echo "=-= DahBox Build ${NAME} =-="
-  container=\$(buildah from ${REGISTRY}/${FROM}${TAG})
-  $( [[ -n "$install_init" ]] && \
-  echo buildah run \"\$container\" -- ${install_init} )
-  $( [[ -n "$PACKAGES" ]] && \
-  echo buildah run \"\$container\" -- ${install_cmd} ${PACKAGES} )
+function _usage() {
+  echo "Usage: dahbox create name [options] [packages]"
+  echo "  action"
+  echo "    create <name> name off the script to create"
+  echo "  options"
+  echo "    --from, -f <image> base image (default: alpine)"
+  echo "    --tag, -t <tag> base image (default: latest)"
+  echo "    --force, -f force overwrite file if already exist"
+  echo "    --command, -c CMD"
+  echo "    --debug echo bash command"
+}
 
-  ## Include some buildtime annotations
-  buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
-  buildah commit "\$container" "dahbox/${NAME}"
-  echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
-fi
+function _prereq() {
+  if ! command -v podman >/dev/null 2>&1; then
+    echo "=E= Missing podman"
+    exit 1
+  elif ! command -v buildah >/dev/null 2>&1; then
+    echo "=E= Missing buildah"
+    exit 1
+  fi
+}
 
-podman run --rm \\
-  -v "\$HOME:\$HOME" -w "\$PWD" \\
-  --init -it --net host \\
-  "dahbox/${NAME}" ${COMMAND} "\$@"
+function _option() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--from)
+        shift
+        FROM="$1"
+        shift
+      ;;
+      -t|--tag)
+        shift
+        TAG=":$1"
+        shift
+      ;;
+      -c|--command)
+        shift
+        COMMAND="$1"
+        shift
+      ;;
+      --force)
+        FORCE="true"
+        shift
+      ;;
+      --debug)
+        DEBUG="true"
+        shift
+      ;;
+      *)
+        PACKAGES+="$1 "
+        shift
+      ;;
+    esac
+  done
+}
+
+function _create() {
+  NAME="$1"
+  shift
+
+  if [[ -z "$NAME" ]]; then
+    _usage
+    exit 1
+  fi
+
+  _option "$@"
+
+  script_name="$DIR/${NAME}"
+
+  if [[ ${FORCE} == false ]] && [[ -f ${script_name} ]]; then
+    echo "=E= File ${script_name} already exist, use --force "
+    exit 3
+  fi
+
+  install_init=
+  case "$FROM" in
+    alpine)
+      install_cmd="apk add"
+    ;;
+    fedora)
+      install_cmd="dnf install -y"
+    ;;
+    centos)
+      install_cmd="dnf install -y"
+    ;;
+    debian|ubuntu)
+      install_init="apt-get update"
+      install_cmd="apt-get install -y"
+    ;;
+    node)
+      install_cmd="npm install -g"
+    ;;
+    *)
+      echo "=I= Base not know, please define --install_cmd and --install_init"
+      echo "=I= Or don't try to install package"
+    ;;
+  esac
+
+  # shellcheck disable=SC2086
+  cat > "${script_name}" <<EOF
+  #!/usr/bin/env bash
+  # =-=
+  # =-= DahBox ${NAME} =-= #
+  # =-=
+  $( [[ -n "$DEBUG" ]] && echo "set -x")
+  image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
+
+  if [[ -z "\$image_id" ]]; then
+    echo "=-= DahBox Build ${NAME} =-="
+    container=\$(buildah from ${REGISTRY}/${FROM}${TAG})
+    $( [[ -n "$install_init" ]] && \
+    echo buildah run \"\$container\" -- ${install_init} )
+    $( [[ -n "$PACKAGES" ]] && \
+    echo buildah run \"\$container\" -- ${install_cmd} ${PACKAGES} )
+
+    ## Include some buildtime annotations
+    buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
+    buildah commit "\$container" "dahbox/${NAME}"
+    echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+  fi
+
+  podman run --rm \\
+    -v "\$HOME:\$HOME" -w "\$PWD" \\
+    --init -it --net host \\
+    "dahbox/${NAME}" ${COMMAND} "\$@"
 EOF
 
-chmod +x "${script_name}"
+  chmod +x "${script_name}"
 
-echo "=-= Script created : ${script_name} =-="
+  echo "=-= Script created : ${script_name} =-="
+}
+
+_main  "$@"
