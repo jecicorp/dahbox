@@ -59,15 +59,18 @@ function _main() {
 }
 
 function _usage() {
-  echo "Usage: dahbox create name [options] [packages]"
+  echo "Usage: dahbox ACTION [name] [options] [packages]"
   echo "  action"
-  echo "    create <name> name off the script to create"
+  echo "    create NAME : name off the script to create"
+  echo "    list        : print local dahbox"
   echo "  options"
-  echo "    --from, -f <image> base image (default: alpine)"
-  echo "    --tag, -t <tag> base image (default: latest)"
-  echo "    --force, -f force overwrite file if already exist"
-  echo "    --command, -c CMD"
-  echo "    --debug echo bash command"
+  echo "    --command, -c CMD : Command use to start container"
+  echo "    --debug           : echo bash command"
+  echo "    --force, -f       : force overwrite file if already exist"
+  echo "    --from, -f IMAGE  : base image (default: alpine)"
+  echo "    --tag, -t TAG     : base image (default: latest)"
+  echo "  packages"
+  echo "    list of packages you want in the container"
 }
 
 function _prereq() {
