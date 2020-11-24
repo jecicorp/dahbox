@@ -32,6 +32,7 @@ TAG=:latest
 FORCE="false"
 DEBUG="false"
 PACKAGES=""
+declare -a ENVS
 
 # https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -70,6 +71,7 @@ function _usage() {
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
   echo "    --debug           : echo bash command"
+  echo "    --env, -e ENV=VAL : pass en env to container"
   echo "    --force, -f       : force overwrite file if already exist"
   echo "    --from, -f IMAGE  : base image (default: alpine)"
   echo "    --tag, -t TAG     : base image (default: latest)"
@@ -104,6 +106,11 @@ function _option() {
       -c|--command)
         shift
         COMMAND="$1"
+        shift
+      ;;
+      -e|--env)
+        shift
+        ENVS+=( "-e $1" )
         shift
       ;;
       --force)
@@ -188,6 +195,7 @@ if [[ -z "\$image_id" ]]; then
 fi
 
 podman run --rm \\
+  ${ENVS[@]} \\
   -v "\$HOME:\$HOME" -w "\$PWD" \\
   --init -it --net host \\
   "dahbox/${NAME}" ${COMMAND} "\$@"

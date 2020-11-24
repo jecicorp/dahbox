@@ -70,7 +70,7 @@ ng version
 * Maven without installing java
 
 ``` bash
-dahbox create mvn --from maven --tag 3-openjdk-11
+dahbox create mvn --from maven --tag 3-openjdk-11 -e MAVEN_CONFIG=/\$HOME/.m2 
 mvn --version
 ```
 
