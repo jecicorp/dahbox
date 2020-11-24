@@ -49,6 +49,9 @@ function _main() {
     create)
     _create "$@"
     ;;
+    update)
+    _update "$@"
+    ;;
     list)
     _list
     ;;
@@ -68,6 +71,7 @@ function _usage() {
   echo "    create NAME : name off the script to create"
   echo "    list        : print local dahbox"
   echo "    purge       : remove all local dahbox images"
+  echo "    update NAME : pull from image and remove local dahbox images"
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
   echo "    --debug           : echo bash command"
@@ -190,6 +194,7 @@ if [[ -z "\$image_id" ]]; then
 
   ## Include some buildtime annotations
   buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
+  buildah config --label "fr.jeci.dahbox.from=${REGISTRY}/${FROM}${TAG}" "\$container"
   buildah commit "\$container" "dahbox/${NAME}"
   echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 fi
@@ -206,6 +211,26 @@ EOF
   echo "=-= Script created : ${script_name} =-="
 }
 
+
+function _update() {
+  NAME="$1"
+  shift
+
+  if [[ -z "$NAME" ]]; then
+    _usage
+    exit 1
+  fi
+
+  _option "$@"
+
+  script_name="$DIR/${NAME}"
+  image_id="$(podman image ls --filter 'label=fr.jeci.dahbox.name='"${NAME}"''  --format '{{ .Id }}' )"
+  echo "++++$image_id"
+  image_from="$(podman image inspect "$image_id"  --format '{{ index .Labels "fr.jeci.dahbox.from" }}')"
+  podman pull "$image_from"
+  podman image rm "$image_id"
+}
+
 function _list() {
   echo "=-= Local DahBox =-="
   podman image ls --filter 'reference=localhost/dahbox/'
@@ -216,4 +241,10 @@ function _purge() {
   # shellcheck disable=SC2046
   podman image rm $(podman image ls --filter 'reference=localhost/dahbox/' -nq)
 }
+
+function _sample() {
+  echo "=-= Sample DahBox =-="
+
+}
+
 _main  "$@"
