@@ -30,6 +30,7 @@ COMMAND=
 FROM=alpine
 TAG=:latest
 FORCE="false"
+UPDATE="false"
 DEBUG="false"
 PACKAGES=""
 declare -a ENVS
@@ -79,6 +80,7 @@ function _usage() {
   echo "    --force, -f       : force overwrite file if already exist"
   echo "    --from, -f IMAGE  : base image (default: alpine)"
   echo "    --tag, -t TAG     : base image (default: latest)"
+  echo "    --update, -u      : overwrite file if already (implies --force) exist and remove local dahbox images"
   echo "  packages"
   echo "    list of packages you want in the container"
 }
@@ -119,6 +121,11 @@ function _option() {
       ;;
       --force)
         FORCE="true"
+        shift
+      ;;
+      --update)
+        FORCE="true"
+        UPDATE="true"
         shift
       ;;
       --debug)
@@ -175,6 +182,12 @@ function _create() {
     ;;
   esac
 
+  image_id=$(get_image_id ${NAME})
+  if [[ ${UPDATE} == true ]] && [[ -n ${image_id} ]]; then
+    echo "=-= Remove dahbox ${NAME} =-="
+    podman image rm "$image_id"
+  fi
+
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
 #!/usr/bin/env bash
@@ -224,11 +237,21 @@ function _update() {
   _option "$@"
 
   script_name="$DIR/${NAME}"
-  image_id="$(podman image ls --filter 'label=fr.jeci.dahbox.name='"${NAME}"''  --format '{{ .Id }}' )"
-  echo "++++$image_id"
-  image_from="$(podman image inspect "$image_id"  --format '{{ index .Labels "fr.jeci.dahbox.from" }}')"
+  image_id=$(get_image_id "${NAME}")
+  image_from=$(get_image_from "${image_id}")
+
+  echo "=-= Pull $image_from =-="
   podman pull "$image_from"
+  echo "=-= Remove dahbox ${NAME} =-="
   podman image rm "$image_id"
+}
+
+function get_image_id() {
+  podman image ls --filter "label=fr.jeci.dahbox.name=$1"  --format '{{ .Id }}'
+}
+
+function get_image_from() {
+  podman image inspect "$1"  --format '{{ index .Labels "fr.jeci.dahbox.from" }}'
 }
 
 function _list() {
