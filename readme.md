@@ -8,7 +8,7 @@ First you need [buildah](https://github.com/containers/buildah/blob/master/insta
 
 Then copy `dahbox` in a PATH directory, who you are write permission. For example `$HOME/.local/bin`. Then grant executable permission to the script.
 
-For exemple:
+### Quick setup on Fedora
 
 ``` bash
 sudo dnf install podman buildah
@@ -18,75 +18,104 @@ chmod +x $HOME/.local/bin/dahbox
 
 ## Usage
 
-First, you create a script using `dahbox create`. The script will be create next to dahbox script (in `$HOME/.local/bin/`), so it become available in your PATH.
+First create a script using `dahbox create`. The script will be create next to dahbox script (in `$HOME/.local/bin/`), so it become available in your PATH.
 
-Then you call the script like any other program. At first run the container will be build.
+``` bash
+dahbox create shellcheck shellcheck
 
-## Warning
+whereis shellcheck
+  shellcheck: /home/jeci/.local/bin/shellcheck
+```
+
+Then call the script like any other program. On first run, the container is build then run.
+
+``` bash
+shellcheck --help
+```
+
+## Limit
 
 * the container is rootless (thanks to podman) don't try to use `sudo`
-* the container is bind to you `$HOME`, so donc try to use it and file that is outside of your home directory
+* the container is bind to you `$HOME`, so don't try to use it on file that is outside of your home directory
 
 ## Maintenance
 
-DahBox will create container, so you must clean up images to free space.
+DahBox will create container, so you must clean up images to free space. If you want to update a software, juste remove the corresponding image.
 
 ``` bash
-podman image ls
-podman image prune
-```
-
-If you want to update a software, juste remove the corresponding image.
-
-``` bash
+podman image ls --filter 'reference=localhost/dahbox/'
 podman image rm dahbox/shellcheck
 ```
 
-## Examples
-
-* A box based on alpine with shellcheck
+You can also remove all image made by DahBox:
 
 ``` bash
+dahbox prune
+```
+
+## How to create boxes
+
+
+### Box based on alpine image
+
+Without parameters, DahBox create a container based on alpine and install package in parameters (`apk add`)
+
+``` bash
+#dahbox create [name]    [packages]
 dahbox create shellcheck shellcheck
 shellcheck --help
 shellcheck $HOME/.local/bin/dahbox
 ```
 
-* npm without installing Node or npm
-
-``` bash
-dahbox create npm --from node --tag current-buster
-npm version
-```
-
-
-* Angular cli, without installing Node or npm
-
-``` bash
-dahbox create ng --from node --tag current-buster @angular/cli
-ng version
-```
-
-* Maven without installing java
-
-``` bash
-dahbox create mvn --from maven --tag 3-openjdk-11 -e USER_HOME_DIR=\$HOME/.m2 --command "mvn -Duser.home=\$HOME/.m2"
-mvn --version
-```
-
-* Bash in Alpine
+Box to use `bash` in Alpine :
 
 ``` bash
 dahbox create alpine --command bash bash
 alpine
 ```
 
-* Mongo
+Box to use `mongo` version 3.9 :
 
 ``` bash
 dahbox create mongo --tag 3.9 mongodb
 mongo
 ```
+
+
+### Box based on node image
+
+Simple box with node to use npm. Without `--command` parameter, the container start with the program of the container name.
+
+Here image `node:current-buster` is run with `npm`.
+
+``` bash
+dahbox create npm --from node --tag current-buster
+# is equivalent to
+dahbox create npm --from node --tag current-buster --command npm
+
+npm version
+```
+
+You can add a list of software to install with `npm install`
+
+``` bash
+dahbox create ng --from node --tag current-buster @angular/cli
+# is equivalent to
+dahbox create ng --from node --tag current-buster --command ng --install-cmd "npm install -g @angular/cli"
+
+ng version
+```
+
+
+### Box based on maven image
+
+It's a more complexe box, here we choose the version of maven to use `3-openjdk-11` and define an env. This permit to use `.m2` maven local repository that is outside of container.
+
+``` bash
+dahbox create mvn --from maven --tag 3-openjdk-11 -e USER_HOME_DIR=\$HOME/.m2 --command "mvn -Duser.home=\$HOME/.m2"
+mvn --version
+```
+
 
 ## Licensing
 

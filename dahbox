@@ -132,6 +132,16 @@ function _option() {
         DEBUG="true"
         shift
       ;;
+      --install-cmd)
+        shift
+        install_cmd="$1"
+        shift
+      ;;
+      --install-init)
+        shift
+        install_init="$1"
+        shift
+      ;;
       *)
         PACKAGES+="$1 "
         shift
@@ -158,7 +168,6 @@ function _create() {
     exit 3
   fi
 
-  install_init=
   case "$FROM" in
     alpine)
       install_cmd="apk add"
@@ -177,7 +186,7 @@ function _create() {
       install_cmd="npm install -g"
     ;;
     *)
-      echo "=I= Base not know, please define --install_cmd and --install_init"
+      echo "=I= Base not know, please define --install-cmd and --install-init"
       echo "=I= Or don't try to install package"
     ;;
   esac
