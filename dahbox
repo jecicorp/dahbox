@@ -35,8 +35,12 @@ DEBUG="false"
 PACKAGES=""
 declare -a ENVS
 
-# https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+if [[ -z "$DAHBOX_HOME" ]]; then
+  # https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
+  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+else
+  DIR=$DAHBOX_HOME
+fi
 
 function _main() {
   _prereq
@@ -284,7 +288,11 @@ function _prune() {
 function _direnv() {
   echo "=-= Init DirEnv Locally =-="
   mkdir -p .dahbox
-  echo "PATH_add $PWD/.dahbox" > .envrc
+
+  cat > ".envrc" <<EOF
+PATH_add $PWD/.dahbox
+export DAHBOX_HOME=$PWD/.dahbox
+EOF
   direnv allow
 }
 
