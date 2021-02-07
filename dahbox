@@ -56,8 +56,8 @@ function _main() {
     list)
     _list
     ;;
-    purge)
-    _purge
+    prune)
+    _prune
     ;;
     *)
       _usage
@@ -71,7 +71,7 @@ function _usage() {
   echo "  action"
   echo "    create NAME : name off the script to create"
   echo "    list        : print local dahbox"
-  echo "    purge       : remove all local dahbox images"
+  echo "    prune       : remove all local dahbox images"
   echo "    update NAME : pull from image and remove local dahbox images"
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
@@ -259,7 +259,7 @@ function _list() {
   podman image ls --filter 'reference=localhost/dahbox/'
 }
 
-function _purge() {
+function _prune() {
   echo "=-= Remove All DahBox Image =-="
   # shellcheck disable=SC2046
   podman image rm $(podman image ls --filter 'reference=localhost/dahbox/' -nq)
