@@ -204,8 +204,10 @@ function _create() {
 # =-= DahBox ${NAME} =-= #
 # =-=
 $( [[ ${DEBUG} == true ]] && echo "set -x")
+# 1. Check Image
 image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
 
+# 2. Build Image
 if [[ -z "\$image_id" ]]; then
   echo "=-= DahBox Build ${NAME} =-="
   container=\$(buildah from ${REGISTRY}/${FROM}${TAG})
@@ -221,6 +223,7 @@ if [[ -z "\$image_id" ]]; then
   echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 fi
 
+# 3. Run container
 podman run --rm \\
   ${ENVS[@]} \\
   -v "\$HOME:\$HOME" -w "\$PWD" \\

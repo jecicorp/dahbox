@@ -117,6 +117,56 @@ mvn --version
 ```
 
 
+### Box based on gradle image
+
+Box with gradle (jdk8) and nodejs
+
+``` bash
+dahbox create gradlenode --update --from gradle --tag jdk8 \
+  -e "GRADLE_USER_HOME=$HOME/.gradle" \
+  --install-init "apt-get update" \
+  --install-cmd "apt-get install -y" nodejs npm \
+  --command gradle
+```
+
+## Debug
+
+To see what DahBox do, you can read scripts generate by DahBox.
+
+``` bash
+$ whereis shellcheck
+ shellcheck: /home/jeci/.local/bin/shellcheck
+$ cat /home/jeci/.local/bin/shellcheck
+#!/usr/bin/env bash
+# =-=
+# =-= DahBox shellcheck =-= #
+# =-=
+
+# 1. Check Image
+image_id=$(podman image ls --filter 'label=fr.jeci.dahbox.name=shellcheck' --noheading --quiet)
+
+# 2. Build Image
+if [[ -z "$image_id" ]]; then
+  echo "=-= DahBox Build shellcheck =-="
+  container=$(buildah from docker.io/library/alpine:latest)
+
+  buildah run "$container" -- apk add shellcheck
+
+  ## Include some buildtime annotations
+  buildah config --label "fr.jeci.dahbox.name=shellcheck" "$container"
+  buildah commit "$container" "dahbox/shellcheck"
+  echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+fi
+
+# 3. Run container
+podman run --rm \
+  -v "$HOME:$HOME" -w "$PWD" \
+  -it --net host \
+  "dahbox/shellcheck" shellcheck "$@"
+```
+
+You can also add `--debug` parameter that `set -x` on bash script (echo each command).
+
 ## Licensing
 
 DahBox is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version
