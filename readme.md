@@ -129,6 +129,18 @@ dahbox create gradlenode --update --from gradle --tag jdk8 \
   --command gradle
 ```
 
+## DirEnv
+
+Ce coolest feature is to use DahBox with [DirEnv](direnv.net/) so you can define box per project.
+
+`dahbox direnv` will init a .dahbox folder and .envrc file to load a local dahbox.
+
+``` bash
+mkdir .dahbox
+echo "PATH_add $PWD/.dahbox" > .envrc
+direnv allow
+```
+
 ## Debug
 
 To see what DahBox do, you can read scripts generate by DahBox.

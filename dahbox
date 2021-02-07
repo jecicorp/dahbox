@@ -59,6 +59,9 @@ function _main() {
     prune)
     _prune
     ;;
+    direnv)
+    _direnv
+    ;;
     *)
       _usage
       exit 1
@@ -72,6 +75,7 @@ function _usage() {
   echo "    create NAME : name off the script to create"
   echo "    list        : print local dahbox"
   echo "    prune       : remove all local dahbox images"
+  echo "    direnv      : init direnv locally"
   echo "    update NAME : pull from image and remove local dahbox images"
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
@@ -275,6 +279,13 @@ function _prune() {
   echo "=-= Remove All DahBox Image =-="
   # shellcheck disable=SC2046
   podman image rm $(podman image ls --filter 'reference=localhost/dahbox/' -nq)
+}
+
+function _direnv() {
+  echo "=-= Init DirEnv Locally =-="
+  mkdir -p .dahbox
+  echo "PATH_add $PWD/.dahbox" > .envrc
+  direnv allow
 }
 
 function _sample() {
