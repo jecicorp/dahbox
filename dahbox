@@ -33,6 +33,8 @@ FORCE="false"
 UPDATE="false"
 DEBUG="false"
 PACKAGES=""
+install_cmd=""
+install_init=""
 declare -a ENVS
 
 if [[ -z "$DAHBOX_HOME" ]]; then
@@ -89,6 +91,8 @@ function _usage() {
   echo "    --from, -f IMAGE  : base image (default: alpine)"
   echo "    --tag, -t TAG     : base image (default: latest)"
   echo "    --update, -u      : overwrite file if already (implies --force) exist and remove local dahbox images"
+  echo "    --install-cmd     : overwrite the command use to install packages"
+  echo "    --install-init    : overwrite the command use before install packages (apt update)"
   echo "  packages"
   echo "    list of packages you want in the container"
 }
@@ -176,34 +180,15 @@ function _create() {
     exit 3
   fi
 
-  case "$FROM" in
-    alpine)
-      install_cmd="apk add"
-    ;;
-    fedora)
-      install_cmd="dnf install -y"
-    ;;
-    centos)
-      install_cmd="dnf install -y"
-    ;;
-    debian|ubuntu)
-      install_init="apt-get update"
-      install_cmd="apt-get install -y"
-    ;;
-    node)
-      install_cmd="npm install -g"
-    ;;
-    *)
-      echo "=I= Base not know, please define --install-cmd and --install-init"
-      echo "=I= Or don't try to install package"
-    ;;
-  esac
-
-  image_id=$(get_image_id ${NAME})
-  if [[ ${UPDATE} == true ]] && [[ -n ${image_id} ]]; then
-    echo "=-= Remove dahbox ${NAME} =-="
-    podman image rm "$image_id"
+  if [[ -z "$install_init" ]]; then
+    _fix_install_init
   fi
+
+  if [[ -z "$install_cmd" ]]; then
+    _fix_install_cmd
+  fi
+
+  _update_rm "${NAME}"
 
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
@@ -244,6 +229,41 @@ EOF
   echo "=-= Script created : ${script_name} =-="
 }
 
+function _fix_install_cmd() {
+  case "$FROM" in
+    alpine)
+      install_cmd="apk add"
+    ;;
+    fedora)
+      install_cmd="dnf install -y"
+    ;;
+    centos)
+      install_cmd="dnf install -y"
+    ;;
+    debian|ubuntu)
+      install_init="apt-get update"
+      install_cmd="apt-get install -y"
+    ;;
+    node)
+      install_cmd="npm install -g"
+    ;;
+    *)
+      echo "=I= Base not know, please define --install-cmd and --install-init"
+      echo "=I= Or don't try to install package"
+    ;;
+  esac
+}
+
+function _fix_install_init() {
+  case "$FROM" in
+    debian|ubuntu)
+      install_init="apt-get update"
+    ;;
+    *)
+      # Do nothing
+    ;;
+  esac
+}
 
 function _update() {
   NAME="$1"
@@ -264,6 +284,15 @@ function _update() {
   podman pull "$image_from"
   echo "=-= Remove dahbox ${NAME} =-="
   podman image rm "$image_id"
+}
+
+function _update_rm() {
+  NAME="$1"
+  image_id=$(get_image_id ${NAME})
+  if [[ ${UPDATE} == true ]] && [[ -n ${image_id} ]]; then
+    echo "=-= Remove dahbox ${NAME} =-="
+    podman image rm "$image_id"
+  fi
 }
 
 function get_image_id() {
