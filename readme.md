@@ -112,7 +112,7 @@ ng version
 It's a more complexe box, here we choose the version of maven to use `3-openjdk-11` and define an env. This permit to use `.m2` maven local repository that is outside of container.
 
 ``` bash
-dahbox create mvn --from maven --tag 3-openjdk-11 -e USER_HOME_DIR=\$HOME/.m2 --command "mvn -Duser.home=\$HOME/.m2"
+dahbox create mvn --from maven --tag 3-openjdk-11 -e USER_HOME_DIR=\$HOME --command "mvn -Duser.home=\$HOME"
 mvn --version
 ```
 
