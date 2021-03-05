@@ -26,6 +26,7 @@ declare -r ACTION="$1"
 shift
 NAME=
 REGISTRY=docker.io/library
+PODMAN_USERNS=keep-id
 COMMAND=
 FROM=alpine
 TAG=:latest
@@ -93,6 +94,7 @@ function _usage() {
   echo "    --update, -u      : overwrite file if already (implies --force) exist and remove local dahbox images"
   echo "    --install-cmd     : overwrite the command use to install packages"
   echo "    --install-init    : overwrite the command use before install packages (apt update)"
+  echo "    --userns          : Set  the  user  namespace  mode for the container. (default: keep-id), see man podman-run for more details"
   echo "  packages"
   echo "    list of packages you want in the container"
 }
@@ -152,6 +154,11 @@ function _option() {
       --install-init)
         shift
         install_init="$1"
+        shift
+      ;;
+      --userns)
+        shift
+        PODMAN_USERNS="$1"
         shift
       ;;
       *)
@@ -215,6 +222,8 @@ if [[ -z "\$image_id" ]]; then
   buildah commit "\$container" "dahbox/${NAME}"
   echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 fi
+
+export PODMAN_USERNS=${PODMAN_USERNS}
 
 # 3. Run container
 podman run --rm \\
