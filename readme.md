@@ -109,9 +109,9 @@ ng version
 More complexe example, we fix the node version and add some specific parameter to npm install.
 
 ``` bash
-dahbox create yo_alfresco --from node --tag 14.16.0-buster -e HOME --command yo --install-cmd "npm install -g --unsafe-perm" --update yo generator-alfresco-adf-app@4.2.0
+dahbox create yo_14 --from node --tag 14.16.0 -e HOME --command "yo --no-insight" --install-cmd "npm install -g --unsafe-perm" yo generator-alfresco-adf-app@4.2.0
 
-yo_alfresco --help
+yo_14 --help
 ```
 
 
