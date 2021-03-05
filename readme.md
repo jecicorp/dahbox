@@ -101,9 +101,17 @@ You can add a list of software to install with `npm install`
 ``` bash
 dahbox create ng --from node --tag current-buster @angular/cli
 # is equivalent to
-dahbox create ng --from node --tag current-buster --command ng --install-cmd "npm install -g @angular/cli"
+dahbox create ng --from node --tag current-buster --command ng --install-cmd "npm install -g" @angular/cli
 
 ng version
+```
+
+More complexe example, we fix the node version and add some specific parameter to npm install.
+
+``` bash
+dahbox create yo_alfresco --from node --tag 14.16.0-buster -e HOME --command yo --install-cmd "npm install -g --unsafe-perm" --update yo generator-alfresco-adf-app@4.2.0
+
+yo_alfresco --help
 ```
 
 
