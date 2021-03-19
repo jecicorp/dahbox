@@ -101,9 +101,17 @@ You can add a list of software to install with `npm install`
 ``` bash
 dahbox create ng --from node --tag current-buster @angular/cli
 # is equivalent to
-dahbox create ng --from node --tag current-buster --command ng --install-cmd "npm install -g @angular/cli"
+dahbox create ng --from node --tag current-buster --command ng --install-cmd "npm install -g" @angular/cli
 
 ng version
+```
+
+More complexe example, we fix the node version and add some specific parameter to npm install.
+
+``` bash
+dahbox create yo_14 --from node --tag 14.16.0 -e HOME --command "yo --no-insight" --install-cmd "npm install -g --unsafe-perm" yo generator-alfresco-adf-app@4.2.0
+
+yo_14 --help
 ```
 
 
@@ -112,7 +120,7 @@ ng version
 It's a more complexe box, here we choose the version of maven to use `3-openjdk-11` and define an env. This permit to use `.m2` maven local repository that is outside of container.
 
 ``` bash
-dahbox create mvn --from maven --tag 3-openjdk-11 -e USER_HOME_DIR=\$HOME/.m2 --command "mvn -Duser.home=\$HOME/.m2"
+dahbox create mvn --from maven --tag 3-openjdk-11 -e USER_HOME_DIR=\$HOME --command "mvn -Duser.home=\$HOME"
 mvn --version
 ```
 
@@ -127,6 +135,18 @@ dahbox create gradlenode --update --from gradle --tag jdk8 \
   --install-init "apt-get update" \
   --install-cmd "apt-get install -y" nodejs npm \
   --command gradle
+```
+
+## DirEnv
+
+Ce coolest feature is to use DahBox with [DirEnv](direnv.net/) so you can define box per project.
+
+`dahbox direnv` will init a .dahbox folder and .envrc file to load a local dahbox.
+
+``` bash
+mkdir .dahbox
+echo "PATH_add $PWD/.dahbox" > .envrc
+direnv allow
 ```
 
 ## Debug

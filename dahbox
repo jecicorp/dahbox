@@ -26,6 +26,7 @@ declare -r ACTION="$1"
 shift
 NAME=
 REGISTRY=docker.io/library
+PODMAN_USERNS=keep-id
 COMMAND=
 FROM=alpine
 TAG=:latest
@@ -33,10 +34,16 @@ FORCE="false"
 UPDATE="false"
 DEBUG="false"
 PACKAGES=""
+install_cmd=""
+install_init=""
 declare -a ENVS
 
-# https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+if [[ -z "$DAHBOX_HOME" ]]; then
+  # https://stackoverflow.com/questions/59895/how-to-get-the-source-directory-of-a-bash-script-from-within-the-script-itself
+  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+else
+  DIR=$DAHBOX_HOME
+fi
 
 function _main() {
   _prereq
@@ -59,6 +66,9 @@ function _main() {
     prune)
     _prune
     ;;
+    direnv)
+    _direnv
+    ;;
     *)
       _usage
       exit 1
@@ -72,6 +82,7 @@ function _usage() {
   echo "    create NAME : name off the script to create"
   echo "    list        : print local dahbox"
   echo "    prune       : remove all local dahbox images"
+  echo "    direnv      : init direnv locally"
   echo "    update NAME : pull from image and remove local dahbox images"
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
@@ -81,6 +92,9 @@ function _usage() {
   echo "    --from, -f IMAGE  : base image (default: alpine)"
   echo "    --tag, -t TAG     : base image (default: latest)"
   echo "    --update, -u      : overwrite file if already (implies --force) exist and remove local dahbox images"
+  echo "    --install-cmd     : overwrite the command use to install packages"
+  echo "    --install-init    : overwrite the command use before install packages (apt update)"
+  echo "    --userns          : Set  the  user  namespace  mode for the container. (default: keep-id), see man podman-run for more details"
   echo "  packages"
   echo "    list of packages you want in the container"
 }
@@ -142,6 +156,11 @@ function _option() {
         install_init="$1"
         shift
       ;;
+      --userns)
+        shift
+        PODMAN_USERNS="$1"
+        shift
+      ;;
       *)
         PACKAGES+="$1 "
         shift
@@ -168,34 +187,15 @@ function _create() {
     exit 3
   fi
 
-  case "$FROM" in
-    alpine)
-      install_cmd="apk add"
-    ;;
-    fedora)
-      install_cmd="dnf install -y"
-    ;;
-    centos)
-      install_cmd="dnf install -y"
-    ;;
-    debian|ubuntu)
-      install_init="apt-get update"
-      install_cmd="apt-get install -y"
-    ;;
-    node)
-      install_cmd="npm install -g"
-    ;;
-    *)
-      echo "=I= Base not know, please define --install-cmd and --install-init"
-      echo "=I= Or don't try to install package"
-    ;;
-  esac
-
-  image_id=$(get_image_id ${NAME})
-  if [[ ${UPDATE} == true ]] && [[ -n ${image_id} ]]; then
-    echo "=-= Remove dahbox ${NAME} =-="
-    podman image rm "$image_id"
+  if [[ -z "$install_init" ]]; then
+    _fix_install_init
   fi
+
+  if [[ -z "$install_cmd" ]]; then
+    _fix_install_cmd
+  fi
+
+  _update_rm "${NAME}"
 
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
@@ -223,6 +223,8 @@ if [[ -z "\$image_id" ]]; then
   echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 fi
 
+export PODMAN_USERNS=${PODMAN_USERNS}
+
 # 3. Run container
 podman run --rm \\
   ${ENVS[@]} \\
@@ -236,6 +238,41 @@ EOF
   echo "=-= Script created : ${script_name} =-="
 }
 
+function _fix_install_cmd() {
+  case "$FROM" in
+    alpine)
+      install_cmd="apk add"
+    ;;
+    fedora)
+      install_cmd="dnf install -y"
+    ;;
+    centos)
+      install_cmd="dnf install -y"
+    ;;
+    debian|ubuntu)
+      install_init="apt-get update"
+      install_cmd="apt-get install -y"
+    ;;
+    node)
+      install_cmd="npm install -g"
+    ;;
+    *)
+      echo "=I= Base not know, please define --install-cmd and --install-init"
+      echo "=I= Or don't try to install package"
+    ;;
+  esac
+}
+
+function _fix_install_init() {
+  case "$FROM" in
+    debian|ubuntu)
+      install_init="apt-get update"
+    ;;
+    *)
+      # Do nothing
+    ;;
+  esac
+}
 
 function _update() {
   NAME="$1"
@@ -258,6 +295,15 @@ function _update() {
   podman image rm "$image_id"
 }
 
+function _update_rm() {
+  NAME="$1"
+  image_id=$(get_image_id ${NAME})
+  if [[ ${UPDATE} == true ]] && [[ -n ${image_id} ]]; then
+    echo "=-= Remove dahbox ${NAME} =-="
+    podman image rm "$image_id"
+  fi
+}
+
 function get_image_id() {
   podman image ls --filter "label=fr.jeci.dahbox.name=$1"  --format '{{ .Id }}'
 }
@@ -275,6 +321,17 @@ function _prune() {
   echo "=-= Remove All DahBox Image =-="
   # shellcheck disable=SC2046
   podman image rm $(podman image ls --filter 'reference=localhost/dahbox/' -nq)
+}
+
+function _direnv() {
+  echo "=-= Init DirEnv Locally =-="
+  mkdir -p .dahbox
+
+  cat > ".envrc" <<EOF
+PATH_add $PWD/.dahbox
+export DAHBOX_HOME=$PWD/.dahbox
+EOF
+  direnv allow
 }
 
 function _sample() {
