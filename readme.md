@@ -114,6 +114,11 @@ dahbox create yo_14 --from node --tag 14.16.0 -e HOME --command "yo --no-insight
 yo_14 --help
 ```
 
+#### Troubleshooting
+
+If you are this problem `Error: EACCES: permission denied, scandir ...` when you execute the command `npm`.
+It is possible that SELinux is enforcing mode. Switch in permissive mode `sudo setenforce 0`.
+
 
 ### Box based on maven image
 
