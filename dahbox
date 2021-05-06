@@ -2,7 +2,7 @@
 #
 # DahBox
 #
-#  Copyright 2020 Jérémie Lesage, Jeci <https://jeci.fr/>
+#  Copyright 2020-2021 Jérémie Lesage, Jeci <https://jeci.fr/>
 #
 # This file is part of GNU grep.
 #
@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+DAHBOX_VERSION=beta
 
 set -o pipefail
 
@@ -69,9 +70,13 @@ function _main() {
     direnv)
     _direnv
     ;;
+    version)
+    echo "$DAHBOX_VERSION"
+    exit 0
+    ;;
     *)
-      _usage
-      exit 1
+    _usage
+    exit 0
     ;;
   esac
 }
