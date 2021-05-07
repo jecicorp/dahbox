@@ -22,8 +22,10 @@ function check_os() {
   eval "OS_$(grep ID /etc/os-release)"
   if [ "$OS_ID" == "fedora" ]; then
     echo "--- Installing on Fedora"
+  elif [ "$OS_ID" == "ubuntu" ]; then
+    echo "--- Installing on Fedora"
   else
-    echoerr "This installer is only supported fedora"
+    echoerr "This installer is only supported fedora or ubuntu"
     exit 1
   fi
 }
@@ -31,6 +33,12 @@ function check_os() {
 function missing_dependencies() {
   if [ "$OS_ID" == "fedora" ]; then
     echo "sudo dnf install -y podman buildah"
+  fi
+  if [ "$OS_ID" == "ubuntu" ]; then
+    echo 'echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list'
+    echo 'curl -fsSL https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/xUbuntu_20.04/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_stable.gpg > /dev/null'
+    echo 'apt update'
+    echo 'apt install -y podman buildah '
   fi
 }
 
@@ -50,8 +58,6 @@ function dahbox_dir() {
   echoerr "Create directory $DAHBOX_HOME"
   mkdir -p "$DAHBOX_HOME"
 
-
-
   PROFILE_FILE="$HOME/.profile"
   if [[ "$SHELL" == "/bin/bash" ]]; then
     PROFILE_FILE="$HOME/.bashrc"
@@ -64,9 +70,6 @@ function dahbox_dir() {
     echoerr "We will add it into $PROFILE_FILE"
     echo "export PATH=\$PATH:$DAHBOX_HOME" >> "$PROFILE_FILE"
   fi
-
-
-
 }
 
 function dahbox_script() {
