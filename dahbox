@@ -217,9 +217,15 @@ function _create() {
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
 #!/usr/bin/env bash
-# =-=
+# =-=        $(printf "%${#NAME}s") =-= #
 # =-= DahBox ${NAME} =-= #
-# =-=
+# =-=        $(printf "%${#NAME}s") =-= #
+
+# DAHBOX_VERSION=${DAHBOX_VERSION}
+# DAHBOX_HOME=${DIR}
+# CREATION_DATE=$(date)
+# CREATION_COMMAND=$(basename "$0") $*
+
 $( [[ ${DEBUG} == true ]] && echo "set -x")
 # 1. Check Image
 image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
