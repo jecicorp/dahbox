@@ -4,6 +4,14 @@
 
 set -o pipefail
 
+if [ -z "$HOME" ]; then
+  HOME=$(awk -F : '/^'"$(id -un)"':/ {print $6}' /etc/passwd)
+fi
+
+if [ -z "$SHELL" ]; then
+  SHELL=$(awk -F : '/^'"$(id -un)"':/ {print $7}' /etc/passwd)
+fi
+
 DAHBOX_HOME="$HOME/.local/share/dahbox"
 
 function echoerr() {
@@ -42,12 +50,12 @@ function dahbox_dir() {
   echoerr "Create directory $DAHBOX_HOME"
   mkdir -p "$DAHBOX_HOME"
 
-  USRLGN=$(grep -E "^$(id -un)" /etc/passwd)
+
 
   PROFILE_FILE="$HOME/.profile"
-  if [[ "$USRLGN" == *"/bin/bash" ]]; then
-    PROFILE_FILE="$HOME/.BASH_SOURCE"
-  elif [[ "$USRLGN" == *"/bin/zsh" ]]; then
+  if [[ "$SHELL" == "/bin/bash" ]]; then
+    PROFILE_FILE="$HOME/.bashrc"
+  elif [[ "$SHELL" == "/bin/zsh" ]]; then
     PROFILE_FILE="$HOME/.zshrc"
   fi
 
@@ -56,6 +64,8 @@ function dahbox_dir() {
     echoerr "We will add it into $PROFILE_FILE"
     echo "export PATH=\$PATH:$DAHBOX_HOME" >> "$PROFILE_FILE"
   fi
+
+
 
 }
 
