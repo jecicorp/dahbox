@@ -209,6 +209,11 @@ function _create() {
 
   _update_rm "${NAME}"
 
+  SECURITY_OPT=
+  if [ -n "$SE_LABEL_OPTS" ]; then
+    SECURITY_OPT="--security-opt $SE_LABEL_OPTS"
+  fi
+
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
 #!/usr/bin/env bash
