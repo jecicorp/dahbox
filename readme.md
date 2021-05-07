@@ -6,25 +6,27 @@ Simple integration of [podman](https://podman.io/) and [buildah](https://github.
 
 First you need [buildah](https://github.com/containers/buildah/blob/master/install.md) and [podman](https://podman.io/getting-started/installation#linux-distributions).
 
-Then copy `dahbox` in a PATH directory, who you are write permission. For example `$HOME/.local/bin`. Then grant executable permission to the script.
+Then copy `dahbox` in a PATH directory, who you are write permission. Then grant executable permission to the script.
 
-### Quick setup on Fedora
+The install script create a new directory to host all boxes `$HOME/.local/share/dahbox` and add it tou your `PATH`
 
 ``` bash
-sudo dnf install podman buildah
-curl -o $HOME/.local/bin/dahbox https://gitlab.beezim.fr/jeci/dahbox/-/raw/master/dahbox
-chmod +x $HOME/.local/bin/dahbox
+curl https://jeci.fr/dahbox-install.sh | bash
 ```
 
 ## Usage
 
-First create a script using `dahbox create`. The script will be create next to dahbox script (in `$HOME/.local/bin/`), so it become available in your PATH.
+First create a box using `dahbox create`. A box is a shell script create in `DAHBOX_HOME` (in `$HOME/.local/share/dahbox`). You must check that this directory is in your PATH.
+
+``` bash
+echo $PATH | grep  'share/dahbox'
+```
 
 ``` bash
 dahbox create shellcheck shellcheck
 
 whereis shellcheck
-  shellcheck: /home/jeci/.local/bin/shellcheck
+  shellcheck: /home/jeci/.local/share/dahbox/shellcheck
 ```
 
 Then call the script like any other program. On first run, the container is build then run.
@@ -64,7 +66,7 @@ Without parameters, DahBox create a container based on alpine and install packag
 #dahbox create [name]    [packages]
 dahbox create shellcheck shellcheck
 shellcheck --help
-shellcheck $HOME/.local/bin/dahbox
+shellcheck $HOME/.local/share/dahbox/dahbox
 ```
 
 Box to use `bash` in Alpine :
@@ -160,8 +162,8 @@ To see what DahBox do, you can read scripts generate by DahBox.
 
 ``` bash
 $ whereis shellcheck
- shellcheck: /home/jeci/.local/bin/shellcheck
-$ cat /home/jeci/.local/bin/shellcheck
+ shellcheck: /home/jeci/.local/share/dahbox/shellcheck
+$ cat /home/jeci/.local/share/dahbox/shellcheck
 #!/usr/bin/env bash
 # =-=
 # =-= DahBox shellcheck =-= #
