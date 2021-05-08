@@ -33,7 +33,6 @@ COMMAND=
 FROM=alpine
 TAG=:latest
 FORCE="false"
-UPDATE="false"
 DEBUG="false"
 PACKAGES=""
 install_cmd=""
@@ -89,7 +88,7 @@ function _usage() {
   echo "    list        : print local dahbox"
   echo "    prune       : remove all local dahbox images"
   echo "    direnv      : init direnv locally"
-  echo "    update NAME : pull from image and remove local dahbox images"
+  echo "    update NAME : update (pull) the from image and remove local dahbox images"
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
   echo "    --debug           : echo bash command"
@@ -97,7 +96,6 @@ function _usage() {
   echo "    --force, -f       : force overwrite file if already exist"
   echo "    --from, -f IMAGE  : base image (default: alpine)"
   echo "    --tag, -t TAG     : base image (default: latest)"
-  echo "    --update, -u      : overwrite file if already (implies --force) exist and remove local dahbox images"
   echo "    --install-cmd     : overwrite the command use to install packages"
   echo "    --install-init    : overwrite the command use before install packages (apt update)"
   echo "    --userns          : Set the  user  namespace  mode for the container. (default: keep-id), see man podman-run for more details"
@@ -142,11 +140,6 @@ function _option() {
       ;;
       --force)
         FORCE="true"
-        shift
-      ;;
-      --update)
-        FORCE="true"
-        UPDATE="true"
         shift
       ;;
       --debug)
@@ -206,8 +199,6 @@ function _create() {
   if [[ -z "$install_cmd" ]]; then
     _fix_install_cmd
   fi
-
-  _update_rm "${NAME}"
 
   SECURITY_OPT=
   if [ -n "$SE_LABEL_OPTS" ]; then
@@ -312,27 +303,22 @@ function _update() {
 
   _option "$@"
 
-  script_name="$DIR/${NAME}"
-  image_id=$(get_image_id "${NAME}")
-  image_from=$(get_image_from "${image_id}")
+  script_name="$DIR/$NAME"
+  image_sha=$(awk -F= '/^# DAHBOX_SHA=/ { print $2 }' "$script_name")
+  image_id=$(get_image_id "$NAME" "$image_sha")
+  image_from=$(get_image_from "$image_id")
 
   echo "=-= Pull $image_from =-="
-  podman pull "$image_from"
-  echo "=-= Remove dahbox ${NAME} =-="
-  podman image rm "$image_id"
-}
-
-function _update_rm() {
-  NAME="$1"
-  image_id=$(get_image_id ${NAME})
-  if [[ ${UPDATE} == true ]] && [[ -n ${image_id} ]]; then
-    echo "=-= Remove dahbox ${NAME} =-="
-    podman image rm "$image_id"
-  fi
+  buildah pull "$image_from"
+  echo "=-= Remove dahbox $NAME =-="
+  buildah rmi "$image_id"
 }
 
 function get_image_id() {
-  podman image ls --filter "label=fr.jeci.dahbox.name=$1"  --format '{{ .Id }}'
+  podman image ls \
+    --filter "label=fr.jeci.dahbox.name=$1" \
+    --filter "label=fr.jeci.dahbox.sha=$2" \
+    --format '{{ .Id }}'
 }
 
 function get_image_from() {
