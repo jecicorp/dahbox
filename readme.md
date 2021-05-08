@@ -54,6 +54,26 @@ In DahBox we use `container_runtime_t` as default solution.
 
 ## Maintenance
 
+### Update
+
+The update command will pull (refresh) the source image (`FROM`) of the box and remove the current local image. This will provoque the rebuild of the box.
+
+
+``` bash
+buildah update mvn
+  =-= Pull docker.io/library/maven:3-openjdk-8 =-=
+  87963037f00b802f79ad30181efa0603f9146519d8175216c57d1dc4f62f8b45
+  =-= Remove dahbox mvn =-=
+  c47b31b53e62a6fc4f31a9deb6cda8c7f4ed27261a147ea991e094c0d035d130
+
+mvn --version
+  =-= DahBox Build mvn =-=
+  Getting image source signatures
+  ...  
+```
+
+### Prune
+
 DahBox will create container, so you must clean up images to free space. If you want to update a software, juste remove the corresponding image.
 
 ``` bash
@@ -149,7 +169,7 @@ mvn --version
 Box with gradle (jdk8) and nodejs
 
 ``` bash
-dahbox create gradlenode --update --from gradle --tag jdk8 \
+dahbox create gradlenode --from gradle --tag jdk8 \
   -e "GRADLE_USER_HOME=$HOME/.gradle" \
   --install-init "apt-get update" \
   --install-cmd "apt-get install -y" nodejs npm \
