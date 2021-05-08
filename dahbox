@@ -20,6 +20,24 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 DAHBOX_VERSION=beta
+DAHBOX_COMMAND=$(basename "$0")
+
+
+# store arguments in a special array
+args=("$@")
+# get number of elements
+ELEMENTS=${#args[@]}
+
+# echo each element in array
+# for loop
+for (( i=0;i<$ELEMENTS;i++)); do
+  param=${args[${i}]}
+  [[ "$param" == "--force" ]] && continue
+  DAHBOX_COMMAND+=" "
+  [[ "$param" =~ " " ]] && DAHBOX_COMMAND+='"'
+  DAHBOX_COMMAND+=$(echo -n "$param" | sed 's/\$/\\\$/g')
+  [[ "$param" =~ " " ]] && DAHBOX_COMMAND+='"'
+done
 
 set -o pipefail
 
@@ -70,6 +88,9 @@ function _main() {
     direnv)
     _direnv
     ;;
+    export)
+    _export
+    ;;
     version)
     echo "$DAHBOX_VERSION"
     exit 0
@@ -89,6 +110,7 @@ function _usage() {
   echo "    prune       : remove all local dahbox images"
   echo "    direnv      : init direnv locally"
   echo "    update NAME : update (pull) the from image and remove local dahbox images"
+  echo "    export      : export configuration of boxes define in DAHBOX_HOME"
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
   echo "    --debug           : echo bash command"
@@ -204,8 +226,7 @@ function _create() {
   if [ -n "$SE_LABEL_OPTS" ]; then
     SECURITY_OPT="--security-opt $SE_LABEL_OPTS"
   fi
-  DAHBOX_COMMAND="$(basename "$0") $*"
-  DAHBOX_SHA=$(echo -n $DAHBOX_COMMAND |sha1sum | tr -d " -")
+  DAHBOX_SHA=$(echo -n $DAHBOX_COMMAND | sha1sum | tr -d " -")
 
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
@@ -217,7 +238,7 @@ function _create() {
 # DAHBOX_VERSION=${DAHBOX_VERSION}
 # DAHBOX_HOME=${DIR}
 # DAHBOX_DATE=$(date)
-# DAHBOX_COMMAND="${DAHBOX_COMMAND}"
+# DAHBOX_COMMAND=${DAHBOX_COMMAND}
 # DAHBOX_SHA=${DAHBOX_SHA}
 
 $( [[ ${DEBUG} == true ]] && echo "set -x")
@@ -345,6 +366,14 @@ PATH_add $PWD/.dahbox
 export DAHBOX_HOME=$PWD/.dahbox
 EOF
   direnv allow
+}
+
+function _export() {
+  echo "# =-= Export boxes in $DAHBOX_HOME =-="
+  for box in $(ls "$DAHBOX_HOME"); do
+    [[ "$box" == "dahbox" ]] && continue
+    sed -n '/^# DAHBOX_COMMAND=/ s/// p' "$DAHBOX_HOME/$box"
+  done
 }
 
 function _sample() {

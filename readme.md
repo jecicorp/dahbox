@@ -84,6 +84,13 @@ npm --version
 
 You can make the same thing without direnv but you need to add the `$PWD/.dahbox` in your path manually
 
+### Share Boxes
+
+`dahbox direnv` will print all `dahbox create` command of all boxes in the DAHBOX_HOME. So you can share your boxes easily.
+
+``` bash
+./dahbox export > my-boxes.sh
+```
 
 ## Limit
 
