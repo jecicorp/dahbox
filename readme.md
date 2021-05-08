@@ -34,6 +34,56 @@ Then call the script like any other program. On first run, the container is buil
 ``` bash
 shellcheck --help
 ```
+## Boxes per projet
+
+### DirEnv
+
+Ce coolest feature is to use DahBox with [DirEnv](direnv.net/) so you can define box per project.
+
+`dahbox direnv` will init a .dahbox folder and .envrc file to load a local dahbox.
+
+``` bash
+mkdir .dahbox
+echo "PATH_add $PWD/.dahbox" > .envrc
+direnv allow
+```
+
+For example you can have a global version of npm :
+
+``` bash
+dahbox create npm --from node
+  =-= Script created : /home/jlesage/git/js-console/.dahbox/npm =-=
+
+whereis npm                    
+  npm: /home/jeci/.local/share/dahbox/npm
+
+npm --version                  
+  =-= DahBox Build npm =-=
+  ...
+  7.11.2
+```
+
+And use a specific version of npm for your project.
+
+``` bash
+mkdir .dahbox
+echo "PATH_add $PWD/.dahbox" > .envrc
+direnv allow
+
+dahbox create npm --from node --tag 14-stretch --command npm
+  =-= Script created : /home/jlesage/git/js-console/.dahbox/npm =-=
+
+whereis mvn
+  mvn: /home/jeci/git/my-cool-project/.dahbox/npm /home/jlesage/.local/share/dahbox/npm
+
+npm --version
+  =-= DahBox Build npm =-=
+  ...
+  6.14.12
+```
+
+You can make the same thing without direnv but you need to add the `$PWD/.dahbox` in your path manually
+
 
 ## Limit
 
@@ -176,17 +226,6 @@ dahbox create gradlenode --from gradle --tag jdk8 \
   --command gradle
 ```
 
-## DirEnv
-
-Ce coolest feature is to use DahBox with [DirEnv](direnv.net/) so you can define box per project.
-
-`dahbox direnv` will init a .dahbox folder and .envrc file to load a local dahbox.
-
-``` bash
-mkdir .dahbox
-echo "PATH_add $PWD/.dahbox" > .envrc
-direnv allow
-```
 
 ## Debug
 
