@@ -213,6 +213,8 @@ function _create() {
   if [ -n "$SE_LABEL_OPTS" ]; then
     SECURITY_OPT="--security-opt $SE_LABEL_OPTS"
   fi
+  DAHBOX_COMMAND="$(basename "$0") $*"
+  DAHBOX_SHA=$(echo -n $DAHBOX_COMMAND |sha1sum | tr -d " -")
 
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
@@ -223,12 +225,13 @@ function _create() {
 
 # DAHBOX_VERSION=${DAHBOX_VERSION}
 # DAHBOX_HOME=${DIR}
-# CREATION_DATE=$(date)
-# CREATION_COMMAND=$(basename "$0") $*
+# DAHBOX_DATE=$(date)
+# DAHBOX_COMMAND="${DAHBOX_COMMAND}"
+# DAHBOX_SHA=${DAHBOX_SHA}
 
 $( [[ ${DEBUG} == true ]] && echo "set -x")
 # 1. Check Image
-image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
+image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --filter 'label=fr.jeci.dahbox.sha=${DAHBOX_SHA}' --noheading --quiet)
 
 # 2. Build Image
 if [[ -z "\$image_id" ]]; then
@@ -242,7 +245,8 @@ if [[ -z "\$image_id" ]]; then
   ## Include some buildtime annotations
   buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
   buildah config --label "fr.jeci.dahbox.from=${REGISTRY}/${FROM}${TAG}" "\$container"
-  buildah commit "\$container" "dahbox/${NAME}"
+  buildah config --label "fr.jeci.dahbox.sha=${DAHBOX_SHA}" "\$container"
+  buildah commit "\$container" "dahbox/${NAME}:${DAHBOX_SHA}"
   echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 fi
 
@@ -253,7 +257,7 @@ podman run --rm \\
   ${ENVS[@]} \\
   -v "\$HOME:\$HOME" -w "\$PWD" \\
   --init -it --net host ${SECURITY_OPT} \\
-  "dahbox/${NAME}" ${COMMAND} "\$@"
+  "dahbox/${NAME}:${DAHBOX_SHA}" ${COMMAND} "\$@"
 EOF
 
   chmod +x "${script_name}"
