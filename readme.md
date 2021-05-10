@@ -42,7 +42,7 @@ shellcheck --help
 
 ## SELinux
 
-Has DahBox bind your home directory in a container, SELinux will block you from reading or writing files. You have 3 solutions to solve this problem.
+Has DahBox bind your home directory in a container, SELinux will block you from reading or writing files. You have many solutions to solve this problem.
 
 1. Deactivate SELinux (`sudo setenforce 0`) it's a bad solution but permit to prov that your problem is cause by selinux
 2. Deactivate SELinux for each container `--security-opt label=disable`, less bad but still bad
