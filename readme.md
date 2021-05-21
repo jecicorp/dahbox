@@ -216,7 +216,7 @@ It is possible that SELinux is enforcing mode. Switch in permissive mode `sudo s
 It's a more complexe box, here we choose the version of maven to use `3-openjdk-11` and define an env. This permit to use `.m2` maven local repository that is outside of container.
 
 ``` bash
-dahbox create mvn --from maven --tag 3-openjdk-11 -e USER_HOME_DIR=\$HOME --command "mvn -Duser.home=\$HOME"
+dahbox create mvn --from maven --tag 3.6-openjdk-8 -e USER_HOME_DIR=\$HOME --command "mvn -Duser.home=\$HOME" --no-entrypoint
 mvn --version
 ```
 
