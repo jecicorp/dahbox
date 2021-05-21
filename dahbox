@@ -296,8 +296,10 @@ function _fix_install_cmd() {
       install_cmd="npm install -g"
     ;;
     *)
-      echo "=I= Base not know, please define --install-cmd and --install-init"
-      echo "=I= Or don't try to install package"
+    if [[ -n "$PACKAGES" ]]; then
+      echo "=W= FROM image not know, we can't install ${PACKAGES}"
+      echo "=W= please define --install-cmd and --install-init"
+    fi
     ;;
   esac
 }
