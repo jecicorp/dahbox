@@ -40,6 +40,18 @@ shellcheck --help
 * the container is rootless (thanks to podman) don't try to use `sudo`
 * the container is bind to you `$HOME`, so don't try to use it on file that is outside of your home directory
 
+## SELinux
+
+Has DahBox bind your home directory in a container, SELinux will block you from reading or writing files. You have many solutions to solve this problem.
+
+1. Deactivate SELinux (`sudo setenforce 0`) it's a bad solution but permit to prov that your problem is cause by selinux
+2. Deactivate SELinux for each container `--security-opt label=disable`, less bad but still bad
+3. Use generic label `--security-opt label=type:container_runtime_t`
+4. Relabelling, by addin `:z` or `:Z` on the mount volume. It's not a good idea because this will relabelling all your home directory. This is slow and may have side effect.
+5. Install a SE Module (using udica), it's the best but more complex solution.
+
+In DahBox we use `container_runtime_t` as default solution.
+
 ## Maintenance
 
 DahBox will create container, so you must clean up images to free space. If you want to update a software, juste remove the corresponding image.
