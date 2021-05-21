@@ -44,7 +44,7 @@ set -o pipefail
 declare -r ACTION="$1"
 shift
 NAME=
-REGISTRY=docker.io/library
+REGISTRY=docker.io
 PODMAN_USERNS=keep-id
 SE_LABEL_OPTS="label=type:container_runtime_t"
 COMMAND=
