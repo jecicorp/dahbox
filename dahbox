@@ -20,6 +20,24 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 DAHBOX_VERSION=beta
+DAHBOX_COMMAND=$(basename "$0")
+
+
+# store arguments in a special array
+args=("$@")
+# get number of elements
+ELEMENTS=${#args[@]}
+
+# echo each element in array
+# for loop
+for (( i=0;i<$ELEMENTS;i++)); do
+  param=${args[${i}]}
+  [[ "$param" == "--force" ]] && continue
+  DAHBOX_COMMAND+=" "
+  [[ "$param" =~ " " ]] && DAHBOX_COMMAND+='"'
+  DAHBOX_COMMAND+=$(echo -n "$param" | sed 's/\$/\\\$/g')
+  [[ "$param" =~ " " ]] && DAHBOX_COMMAND+='"'
+done
 
 set -o pipefail
 
@@ -33,7 +51,6 @@ COMMAND=
 FROM=alpine
 TAG=:latest
 FORCE="false"
-UPDATE="false"
 DEBUG="false"
 PACKAGES=""
 install_cmd=""
@@ -71,6 +88,9 @@ function _main() {
     direnv)
     _direnv
     ;;
+    export)
+    _export
+    ;;
     version)
     echo "$DAHBOX_VERSION"
     exit 0
@@ -89,7 +109,8 @@ function _usage() {
   echo "    list        : print local dahbox"
   echo "    prune       : remove all local dahbox images"
   echo "    direnv      : init direnv locally"
-  echo "    update NAME : pull from image and remove local dahbox images"
+  echo "    update NAME : update (pull) the from image and remove local dahbox images"
+  echo "    export      : export configuration of boxes define in DAHBOX_HOME"
   echo "  options"
   echo "    --command, -c CMD : Command use to start container"
   echo "    --debug           : echo bash command"
@@ -97,7 +118,6 @@ function _usage() {
   echo "    --force, -f       : force overwrite file if already exist"
   echo "    --from, -f IMAGE  : base image (default: alpine)"
   echo "    --tag, -t TAG     : base image (default: latest)"
-  echo "    --update, -u      : overwrite file if already (implies --force) exist and remove local dahbox images"
   echo "    --install-cmd     : overwrite the command use to install packages"
   echo "    --install-init    : overwrite the command use before install packages (apt update)"
   echo "    --userns          : Set the  user  namespace  mode for the container. (default: keep-id), see man podman-run for more details"
@@ -142,11 +162,6 @@ function _option() {
       ;;
       --force)
         FORCE="true"
-        shift
-      ;;
-      --update)
-        FORCE="true"
-        UPDATE="true"
         shift
       ;;
       --debug)
@@ -207,22 +222,28 @@ function _create() {
     _fix_install_cmd
   fi
 
-  _update_rm "${NAME}"
-
   SECURITY_OPT=
   if [ -n "$SE_LABEL_OPTS" ]; then
     SECURITY_OPT="--security-opt $SE_LABEL_OPTS"
   fi
+  DAHBOX_SHA=$(echo -n $DAHBOX_COMMAND | sha1sum | tr -d " -")
 
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
 #!/usr/bin/env bash
-# =-=
+# =-=        $(printf "%${#NAME}s") =-= #
 # =-= DahBox ${NAME} =-= #
-# =-=
+# =-=        $(printf "%${#NAME}s") =-= #
+
+# DAHBOX_VERSION=${DAHBOX_VERSION}
+# DAHBOX_HOME=${DIR}
+# DAHBOX_DATE=$(date)
+# DAHBOX_COMMAND=${DAHBOX_COMMAND}
+# DAHBOX_SHA=${DAHBOX_SHA}
+
 $( [[ ${DEBUG} == true ]] && echo "set -x")
 # 1. Check Image
-image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --noheading --quiet)
+image_id=\$(podman image ls --filter 'label=fr.jeci.dahbox.name=${NAME}' --filter 'label=fr.jeci.dahbox.sha=${DAHBOX_SHA}' --noheading --quiet)
 
 # 2. Build Image
 if [[ -z "\$image_id" ]]; then
@@ -236,7 +257,8 @@ if [[ -z "\$image_id" ]]; then
   ## Include some buildtime annotations
   buildah config --label "fr.jeci.dahbox.name=${NAME}" "\$container"
   buildah config --label "fr.jeci.dahbox.from=${REGISTRY}/${FROM}${TAG}" "\$container"
-  buildah commit "\$container" "dahbox/${NAME}"
+  buildah config --label "fr.jeci.dahbox.sha=${DAHBOX_SHA}" "\$container"
+  buildah commit "\$container" "dahbox/${NAME}:${DAHBOX_SHA}"
   echo "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
 fi
 
@@ -247,7 +269,7 @@ podman run --rm \\
   ${ENVS[@]} \\
   -v "\$HOME:\$HOME" -w "\$PWD" \\
   --init -it --net host ${SECURITY_OPT} \\
-  "dahbox/${NAME}" ${COMMAND} "\$@"
+  "dahbox/${NAME}:${DAHBOX_SHA}" ${COMMAND} "\$@"
 EOF
 
   chmod +x "${script_name}"
@@ -302,27 +324,22 @@ function _update() {
 
   _option "$@"
 
-  script_name="$DIR/${NAME}"
-  image_id=$(get_image_id "${NAME}")
-  image_from=$(get_image_from "${image_id}")
+  script_name="$DIR/$NAME"
+  image_sha=$(awk -F= '/^# DAHBOX_SHA=/ { print $2 }' "$script_name")
+  image_id=$(get_image_id "$NAME" "$image_sha")
+  image_from=$(get_image_from "$image_id")
 
   echo "=-= Pull $image_from =-="
-  podman pull "$image_from"
-  echo "=-= Remove dahbox ${NAME} =-="
-  podman image rm "$image_id"
-}
-
-function _update_rm() {
-  NAME="$1"
-  image_id=$(get_image_id ${NAME})
-  if [[ ${UPDATE} == true ]] && [[ -n ${image_id} ]]; then
-    echo "=-= Remove dahbox ${NAME} =-="
-    podman image rm "$image_id"
-  fi
+  buildah pull "$image_from"
+  echo "=-= Remove dahbox $NAME =-="
+  buildah rmi "$image_id"
 }
 
 function get_image_id() {
-  podman image ls --filter "label=fr.jeci.dahbox.name=$1"  --format '{{ .Id }}'
+  podman image ls \
+    --filter "label=fr.jeci.dahbox.name=$1" \
+    --filter "label=fr.jeci.dahbox.sha=$2" \
+    --format '{{ .Id }}'
 }
 
 function get_image_from() {
@@ -349,6 +366,14 @@ PATH_add $PWD/.dahbox
 export DAHBOX_HOME=$PWD/.dahbox
 EOF
   direnv allow
+}
+
+function _export() {
+  echo "# =-= Export boxes in $DAHBOX_HOME =-="
+  for box in $(ls "$DAHBOX_HOME"); do
+    [[ "$box" == "dahbox" ]] && continue
+    sed -n '/^# DAHBOX_COMMAND=/ s/// p' "$DAHBOX_HOME/$box"
+  done
 }
 
 function _sample() {

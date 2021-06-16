@@ -34,6 +34,63 @@ Then call the script like any other program. On first run, the container is buil
 ``` bash
 shellcheck --help
 ```
+## Boxes per projet
+
+### DirEnv
+
+Ce coolest feature is to use DahBox with [DirEnv](direnv.net/) so you can define box per project.
+
+`dahbox direnv` will init a .dahbox folder and .envrc file to load a local dahbox.
+
+``` bash
+mkdir .dahbox
+echo "PATH_add $PWD/.dahbox" > .envrc
+direnv allow
+```
+
+For example you can have a global version of npm :
+
+``` bash
+dahbox create npm --from node
+  =-= Script created : /home/jlesage/git/js-console/.dahbox/npm =-=
+
+whereis npm                    
+  npm: /home/jeci/.local/share/dahbox/npm
+
+npm --version                  
+  =-= DahBox Build npm =-=
+  ...
+  7.11.2
+```
+
+And use a specific version of npm for your project.
+
+``` bash
+mkdir .dahbox
+echo "PATH_add $PWD/.dahbox" > .envrc
+direnv allow
+
+dahbox create npm --from node --tag 14-stretch --command npm
+  =-= Script created : /home/jlesage/git/js-console/.dahbox/npm =-=
+
+whereis mvn
+  mvn: /home/jeci/git/my-cool-project/.dahbox/npm /home/jlesage/.local/share/dahbox/npm
+
+npm --version
+  =-= DahBox Build npm =-=
+  ...
+  6.14.12
+```
+
+You can make the same thing without direnv but you need to add the `$PWD/.dahbox` in your path manually
+
+### Share Boxes
+
+`dahbox direnv` will print all `dahbox create` command of all boxes in the DAHBOX_HOME. So you can share your boxes easily.
+
+``` bash
+./dahbox export > my-boxes.sh
+```
 
 ## Limit
 
@@ -53,6 +110,26 @@ Has DahBox bind your home directory in a container, SELinux will block you from 
 In DahBox we use `container_runtime_t` as default solution.
 
 ## Maintenance
+
+### Update
+
+The update command will pull (refresh) the source image (`FROM`) of the box and remove the current local image. This will provoque the rebuild of the box.
+
+
+``` bash
+buildah update mvn
+  =-= Pull docker.io/library/maven:3-openjdk-8 =-=
+  87963037f00b802f79ad30181efa0603f9146519d8175216c57d1dc4f62f8b45
+  =-= Remove dahbox mvn =-=
+  c47b31b53e62a6fc4f31a9deb6cda8c7f4ed27261a147ea991e094c0d035d130
+
+mvn --version
+  =-= DahBox Build mvn =-=
+  Getting image source signatures
+  ...  
+```
+
+### Prune
 
 DahBox will create container, so you must clean up images to free space. If you want to update a software, juste remove the corresponding image.
 
@@ -149,24 +226,13 @@ mvn --version
 Box with gradle (jdk8) and nodejs
 
 ``` bash
-dahbox create gradlenode --update --from gradle --tag jdk8 \
+dahbox create gradlenode --from gradle --tag jdk8 \
   -e "GRADLE_USER_HOME=$HOME/.gradle" \
   --install-init "apt-get update" \
   --install-cmd "apt-get install -y" nodejs npm \
   --command gradle
 ```
 
-## DirEnv
-
-Ce coolest feature is to use DahBox with [DirEnv](direnv.net/) so you can define box per project.
-
-`dahbox direnv` will init a .dahbox folder and .envrc file to load a local dahbox.
-
-``` bash
-mkdir .dahbox
-echo "PATH_add $PWD/.dahbox" > .envrc
-direnv allow
-```
 
 ## Debug
 
