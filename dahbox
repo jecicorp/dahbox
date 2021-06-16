@@ -44,7 +44,7 @@ set -o pipefail
 declare -r ACTION="$1"
 shift
 NAME=
-REGISTRY=docker.io/library
+REGISTRY=docker.io
 PODMAN_USERNS=keep-id
 SE_LABEL_OPTS="label=type:container_runtime_t"
 COMMAND=
@@ -55,6 +55,7 @@ DEBUG="false"
 PACKAGES=""
 install_cmd=""
 install_init=""
+entrypoint=""
 declare -a ENVS
 
 if [[ -z "$DAHBOX_HOME" ]]; then
@@ -122,6 +123,8 @@ function _usage() {
   echo "    --install-init    : overwrite the command use before install packages (apt update)"
   echo "    --userns          : Set the  user  namespace  mode for the container. (default: keep-id), see man podman-run for more details"
   echo "    --selabel         : Set the  process label use by the container. (default: 'label=type:container_runtime_t'), see man podman-run for more details"
+  echo "    --entrypoint      : Define the entrypoint. "
+  echo "    --no-entrypoint   : Dverwrite the pre-define entrypoint. (same as --entrypoint=\"\" ) "
   echo "  packages"
   echo "    list of packages you want in the container"
 }
@@ -188,6 +191,15 @@ function _option() {
         SE_LABEL_OPTS="$1"
         shift
       ;;
+      --entrypoint)
+        shift
+        entrypoint="$1"
+        shift
+      ;;
+      --no-entrypoint)
+        entrypoint="_EMPTY_"
+        shift
+      ;;
       *)
         PACKAGES+="$1 "
         shift
@@ -227,6 +239,13 @@ function _create() {
     SECURITY_OPT="--security-opt $SE_LABEL_OPTS"
   fi
   DAHBOX_SHA=$(echo -n $DAHBOX_COMMAND | sha1sum | tr -d " -")
+
+  ENTRYPOINT=
+  if [ "$entrypoint" == "_EMPTY_" ]; then
+    ENTRYPOINT='--entrypoint ""'
+  elif [ -n "$entrypoint" ]; then
+    ENTRYPOINT="--entrypoint $entrypoint"
+  fi
 
   # shellcheck disable=SC2086
   cat > "${script_name}" <<EOF
@@ -268,7 +287,7 @@ export PODMAN_USERNS=${PODMAN_USERNS}
 podman run --rm \\
   ${ENVS[@]} \\
   -v "\$HOME:\$HOME" -w "\$PWD" \\
-  --init -it --net host ${SECURITY_OPT} \\
+  --init -it --net host ${SECURITY_OPT} ${ENTRYPOINT} \\
   "dahbox/${NAME}:${DAHBOX_SHA}" ${COMMAND} "\$@"
 EOF
 
@@ -296,8 +315,10 @@ function _fix_install_cmd() {
       install_cmd="npm install -g"
     ;;
     *)
-      echo "=I= Base not know, please define --install-cmd and --install-init"
-      echo "=I= Or don't try to install package"
+    if [[ -n "$PACKAGES" ]]; then
+      echo "=W= FROM image not know, we can't install ${PACKAGES}"
+      echo "=W= please define --install-cmd and --install-init"
+    fi
     ;;
   esac
 }
