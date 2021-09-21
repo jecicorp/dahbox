@@ -11,7 +11,7 @@ Then copy `dahbox` in a PATH directory, who you are write permission. Then grant
 The install script create a new directory to host all boxes `$HOME/.local/share/dahbox` and add it tou your `PATH`
 
 ``` bash
-curl https://jeci.fr/dahbox-install.sh | bash
+curl https://raw.githubusercontent.com/jecicorp/dahbox/master/install.sh | bash
 ```
 
 ## Usage
